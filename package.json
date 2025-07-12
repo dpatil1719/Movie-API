@@ -1,0 +1,24 @@
+{
+  "name": "movie-api",
+  "version": "1.0.0",
+  "description": "A Simple Movie app",
+  "homepage": "https://github.com/dpatil1719/Movie-API#readme",
+  "bugs": {
+    "url": "https://github.com/dpatil1719/Movie-API/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dpatil1719/Movie-API.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0"
+  }
+}
