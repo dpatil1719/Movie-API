@@ -1,86 +1,146 @@
 const express = require('express');
-const morgan = require('morgan');
+const bodyParser = require('body-parser');
+const uuid = require('uuid');
+
 const app = express();
-const port = 8080;
+app.use(bodyParser.json());
 
-app.use(morgan('common'));
-app.use(express.json()); // Needed to parse JSON body
-
-// In-memory movie list
-let movies = [
+let users = [
   {
-    title: 'Inception',
-    description: 'A skilled thief leads dream heists.',
-    genre: 'Science Fiction',
-    director: 'Christopher Nolan',
-    imageURL: 'https://example.com/inception.jpg'
-  },
-  {
-    title: 'Titanic',
-    description: 'A love story on a doomed ship.',
-    genre: 'Romance/Drama',
-    director: 'James Cameron',
-    imageURL: 'https://example.com/titanic.jpg'
+    id: uuid.v4(),
+    username: 'john_doe',
+    password: 'password123',
+    email: 'john@example.com',
+    favoriteMovies: ['Inception']
   }
 ];
 
-// GET all movies
+let movies = [
+  {
+    title: 'Inception',
+    description: 'A thief who steals corporate secrets through dream-sharing technology.',
+    genre: {
+      name: 'Sci-Fi',
+      description: 'Science fiction explores futuristic concepts and alternate realities.'
+    },
+    director: {
+      name: 'Christopher Nolan',
+      bio: 'British-American director, known for mind-bending films.',
+      birthYear: 1970,
+      deathYear: null
+    },
+    imageURL: 'https://via.placeholder.com/300x450?text=Inception',
+    featured: true
+  },
+  {
+    title: 'The Godfather',
+    description: 'The aging patriarch of an organized crime dynasty transfers control to his son.',
+    genre: {
+      name: 'Crime',
+      description: 'Crime films focus on criminals, crime investigations, and the underworld.'
+    },
+    director: {
+      name: 'Francis Ford Coppola',
+      bio: 'American director and screenwriter known for The Godfather trilogy.',
+      birthYear: 1939,
+      deathYear: null
+    },
+    imageURL: 'https://via.placeholder.com/300x450?text=The+Godfather',
+    featured: false
+  }
+];
+
+app.get('/', (req, res) => {
+  res.send('Welcome to the Movie API!');
+});
+
+// 1. Get all movies
 app.get('/movies', (req, res) => {
   res.json(movies);
 });
 
-// GET a movie by title
+// 2. Get movie by title
 app.get('/movies/:title', (req, res) => {
-  const movieTitle = req.params.title.toLowerCase();
-  const movie = movies.find(m => m.title.toLowerCase() === movieTitle);
-  if (!movie) {
-    return res.status(404).json({ error: 'Movie not found' });
-  }
-  res.json(movie);
+  const movie = movies.find(m => m.title.toLowerCase() === req.params.title.toLowerCase());
+  if (movie) return res.json(movie);
+  res.status(404).send('Movie not found.');
 });
 
-// POST - Add a new movie
-app.post('/movies', (req, res) => {
-  const newMovie = req.body;
-
-  // Check if title already exists
-  const exists = movies.find(m => m.title.toLowerCase() === newMovie.title.toLowerCase());
-  if (exists) {
-    return res.status(400).json({ error: 'Movie already exists' });
-  }
-
-  movies.push(newMovie);
-  res.status(201).json({ message: 'Movie added', movie: newMovie });
+// 3. Get genre by name
+app.get('/genres/:name', (req, res) => {
+  const movie = movies.find(m => m.genre.name.toLowerCase() === req.params.name.toLowerCase());
+  if (movie) return res.json(movie.genre);
+  res.status(404).send('Genre not found.');
 });
 
-// PUT - Update a movie by title
-app.put('/movies/:title', (req, res) => {
-  const titleToUpdate = req.params.title.toLowerCase();
-  const movieIndex = movies.findIndex(m => m.title.toLowerCase() === titleToUpdate);
-
-  if (movieIndex === -1) {
-    return res.status(404).json({ error: 'Movie not found' });
-  }
-
-  // Update movie details
-  movies[movieIndex] = { ...movies[movieIndex], ...req.body };
-  res.json({ message: 'Movie updated', movie: movies[movieIndex] });
+// 4. Get director by name
+app.get('/directors/:name', (req, res) => {
+  const movie = movies.find(m => m.director.name.toLowerCase() === req.params.name.toLowerCase());
+  if (movie) return res.json(movie.director);
+  res.status(404).send('Director not found.');
 });
 
-// DELETE - Remove a movie by title
-app.delete('/movies/:title', (req, res) => {
-  const titleToDelete = req.params.title.toLowerCase();
-  const movieIndex = movies.findIndex(m => m.title.toLowerCase() === titleToDelete);
+// 5. Register new user
+app.post('/users', (req, res) => {
+  const { username, password, email } = req.body;
+  if (!username || !password || !email) return res.status(400).send('Missing user details.');
 
-  if (movieIndex === -1) {
-    return res.status(404).json({ error: 'Movie not found' });
-  }
-
-  const deletedMovie = movies.splice(movieIndex, 1);
-  res.json({ message: 'Movie deleted', movie: deletedMovie[0] });
+  const newUser = {
+    id: uuid.v4(),
+    username,
+    password,
+    email,
+    favoriteMovies: []
+  };
+  users.push(newUser);
+  res.status(201).json(newUser);
 });
 
-// Start server
+// 6. Update username
+app.put('/users/:username', (req, res) => {
+  const user = users.find(u => u.username === req.params.username);
+  if (!user) return res.status(404).send('User not found.');
+
+  const { username, password, email } = req.body;
+  if (username) user.username = username;
+  if (password) user.password = password;
+  if (email) user.email = email;
+
+  res.json(user);
+});
+
+// 7. Add favorite movie
+app.post('/users/:username/movies/:movieTitle', (req, res) => {
+  const user = users.find(u => u.username === req.params.username);
+  const movie = movies.find(m => m.title.toLowerCase() === req.params.movieTitle.toLowerCase());
+
+  if (!user) return res.status(404).send('User not found.');
+  if (!movie) return res.status(404).send('Movie not found.');
+
+  if (!user.favoriteMovies.includes(movie.title)) {
+    user.favoriteMovies.push(movie.title);
+  }
+
+  res.send(`Movie '${movie.title}' added to ${user.username}'s favorites.`);
+});
+
+// 8. Remove favorite movie
+app.delete('/users/:username/movies/:movieTitle', (req, res) => {
+  const user = users.find(u => u.username === req.params.username);
+  if (!user) return res.status(404).send('User not found.');
+
+  user.favoriteMovies = user.favoriteMovies.filter(title => title.toLowerCase() !== req.params.movieTitle.toLowerCase());
+
+  res.send(`Movie '${req.params.movieTitle}' removed from ${user.username}'s favorites.`);
+});
+
+// 9. Delete user
+app.delete('/users/:username', (req, res) => {
+  users = users.filter(u => u.username !== req.params.username);
+  res.send(`User '${req.params.username}' has been deregistered.`);
+});
+
+const port = 8080;
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Movie API is running on http://localhost:${port}`);
 });

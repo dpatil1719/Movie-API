@@ -1,80 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Movie API Documentation</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Movie API Documentation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    th {
+      background-color: #efefef;
+    }
+  </style>
 </head>
 <body>
-
-    <h1>Movie API</h1>
-
-    <p>
-        Welcome to the Movie API! This is a RESTful API that provides access to information about movies, directors, and genres.
-        Developers can use this API to retrieve data about popular movies, search for specific titles, explore director biographies, and browse movie genres. 
-        The API supports common HTTP methods like GET, POST, PUT, and DELETE to interact with and manage movie data.
-    </p>
-
-    <p>
-        Please refer to the sections below for detailed information on API endpoints, authentication, and example usage.
-    </p>
-    <h2>API Endpoints</h2>
-    <table border="1" cellpadding="8" cellspacing="0">
-      <thead>
-        <tr>
-          <th>Request</th>
-          <th>URL</th>
-          <th>Response</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>GET</td>
-          <td>/movies</td>
-          <td>Returns a list of all movies</td>
-        </tr>
-        <tr>
-          <td>GET</td>
-          <td>/movies/:title</td>
-          <td>Returns data about a single movie by title</td>
-        </tr>
-        <tr>
-          <td>GET</td>
-          <td>/genres/:name</td>
-          <td>Returns data (description) about a genre by name</td>
-        </tr>
-        <tr>
-          <td>GET</td>
-          <td>/directors/:name</td>
-          <td>Returns data (bio, birth/death year) about a director by name</td>
-        </tr>
-        <tr>
-          <td>POST</td>
-          <td>/users</td>
-          <td>Allows a new user to register</td>
-        </tr>
-        <tr>
-          <td>PUT</td>
-          <td>/users/:username</td>
-          <td>Allows users to update their username</td>
-        </tr>
-        <tr>
-          <td>POST</td>
-          <td>/users/:username/movies/:movieId</td>
-          <td>Adds a movie to user's list of favorites</td>
-        </tr>
-        <tr>
-          <td>DELETE</td>
-          <td>/users/:username/movies/:movieId</td>
-          <td>Removes a movie from user's list of favorites</td>
-        </tr>
-        <tr>
-          <td>DELETE</td>
-          <td>/users/:username</td>
-          <td>Deletes the user account</td>
-        </tr>
-      </tbody>
-    </table>
-    
-
+  <h1>Movie API Documentation</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Request</th>
+        <th>Endpoint</th>
+        <th>Description</th>
+        <th>Request Body</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>GET</td>
+        <td>/movies</td>
+        <td>Return a list of ALL movies</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td>GET</td>
+        <td>/movies/:title</td>
+        <td>Return data about a single movie by title (description, genre, director, image URL, featured)</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td>GET</td>
+        <td>/movies/genre/:genreName</td>
+        <td>Return data about a genre by name (description)</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td>GET</td>
+        <td>/movies/director/:directorName</td>
+        <td>Return data about a director (bio, birth year, death year)</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td>POST</td>
+        <td>/users</td>
+        <td>Allow new users to register</td>
+        <td>{ "username": "user", "password": "pass", "email": "email" }</td>
+      </tr>
+      <tr>
+        <td>PUT</td>
+        <td>/users/:username</td>
+        <td>Allow users to update their user info</td>
+        <td>{ "username": "newName", "password": "newPass", "email": "newEmail" }</td>
+      </tr>
+      <tr>
+        <td>POST</td>
+        <td>/users/:username/favorites/:movieID</td>
+        <td>Allow users to add a movie to their list of favorites</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td>DELETE</td>
+        <td>/users/:username/favorites/:movieID</td>
+        <td>Allow users to remove a movie from their list of favorites</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td>DELETE</td>
+        <td>/users/:username</td>
+        <td>Allow existing users to deregister</td>
+        <td>None</td>
+      </tr>
+    </tbody>
+  </table>
 </body>
 </html>
