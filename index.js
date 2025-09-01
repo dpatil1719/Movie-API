@@ -1,43 +1,44 @@
 // index.js
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const morgan = require('morgan');
 
-const Models = require('./models.js');
-const Movies = Models.Movie;
-const Users = Models.User;
+const { Movie: Movies, User: Users } = require('./models.js');
 
-mongoose.connect('mongodb://localhost:27017/cfDB', {
+// --- DB CONNECTION ---
+mongoose.connect('mongodb://127.0.0.1:27017/cfDB', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
 
+// --- APP SETUP ---
 const app = express();
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use(morgan('common'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// --- ROOT ---
+app.get('/', (_req, res) => res.send('Welcome to the Movie API!'));
 
-// Root
-app.get('/', (req, res) => {
-  res.send('Welcome to the Movie API!');
-});
-
-// Get all movies
-app.get('/movies', async (req, res) => {
+// 1) Return ALL movies
+app.get('/movies', async (_req, res) => {
   try {
-    const movies = await Movies.find();
+    const movies = await Movies.find().lean();
     res.json(movies);
   } catch (err) {
     res.status(500).send('Error: ' + err);
   }
 });
 
-// Get a movie by title
+// 2) Return a single movie by title (case-insensitive)
 app.get('/movies/:title', async (req, res) => {
   try {
-    const movie = await Movies.findOne({ Title: req.params.title });
+    const movie = await Movies.findOne({
+      Title: new RegExp(`^${req.params.title}$`, 'i')
+    })
+      .select('Title Description Genre Director ImagePath Featured')
+      .lean();
+
     if (!movie) return res.status(404).send('Movie not found.');
     res.json(movie);
   } catch (err) {
@@ -45,29 +46,39 @@ app.get('/movies/:title', async (req, res) => {
   }
 });
 
-// Get genre by name
+// 3) Return data about a genre by name (description, etc.)
 app.get('/genres/:name', async (req, res) => {
   try {
-    const movie = await Movies.findOne({ 'Genre.Name': req.params.name });
-    if (!movie) return res.status(404).send('Genre not found.');
-    res.json(movie.Genre);
+    const doc = await Movies.findOne({
+      'Genre.Name': new RegExp(`^${req.params.name}$`, 'i')
+    })
+      .select('Genre')
+      .lean();
+
+    if (!doc) return res.status(404).send('Genre not found.');
+    res.json(doc.Genre);
   } catch (err) {
     res.status(500).send('Error: ' + err);
   }
 });
 
-// Get director by name
+// 4) Return data about a director by name (bio, birth year, death year)
 app.get('/directors/:name', async (req, res) => {
   try {
-    const movie = await Movies.findOne({ 'Director.Name': req.params.name });
-    if (!movie) return res.status(404).send('Director not found.');
-    res.json(movie.Director);
+    const doc = await Movies.findOne({
+      'Director.Name': new RegExp(`^${req.params.name}$`, 'i')
+    })
+      .select('Director')
+      .lean();
+
+    if (!doc) return res.status(404).send('Director not found.');
+    res.json(doc.Director);
   } catch (err) {
     res.status(500).send('Error: ' + err);
   }
 });
 
-// Register a new user
+// 5) Allow new users to register
 app.post('/users', async (req, res) => {
   try {
     const newUser = await Users.create({
@@ -82,17 +93,17 @@ app.post('/users', async (req, res) => {
   }
 });
 
-// Update user info
+// 6) Allow users to update their user info
 app.put('/users/:username', async (req, res) => {
   try {
     const updatedUser = await Users.findOneAndUpdate(
       { Username: req.params.username },
       {
         $set: {
-          Username: req.body.Username,
-          Password: req.body.Password,
-          Email: req.body.Email,
-          Birthday: req.body.Birthday
+          ...(req.body.Username !== undefined && { Username: req.body.Username }),
+          ...(req.body.Password !== undefined && { Password: req.body.Password }),
+          ...(req.body.Email !== undefined && { Email: req.body.Email }),
+          ...(req.body.Birthday !== undefined && { Birthday: req.body.Birthday })
         }
       },
       { new: true }
@@ -104,7 +115,7 @@ app.put('/users/:username', async (req, res) => {
   }
 });
 
-// Add a movie to favorites
+// 7) Allow users to add a movie to favorites
 app.post('/users/:username/movies/:movieId', async (req, res) => {
   try {
     const updatedUser = await Users.findOneAndUpdate(
@@ -113,13 +124,13 @@ app.post('/users/:username/movies/:movieId', async (req, res) => {
       { new: true }
     );
     if (!updatedUser) return res.status(404).send('User not found.');
-    res.send(`Movie added to ${req.params.username}'s favorites.`);
+    res.json(updatedUser);
   } catch (err) {
     res.status(500).send('Error: ' + err);
   }
 });
 
-// Remove movie from favorites
+// 8) Allow users to remove a movie from favorites
 app.delete('/users/:username/movies/:movieId', async (req, res) => {
   try {
     const updatedUser = await Users.findOneAndUpdate(
@@ -128,13 +139,13 @@ app.delete('/users/:username/movies/:movieId', async (req, res) => {
       { new: true }
     );
     if (!updatedUser) return res.status(404).send('User not found.');
-    res.send(`Movie removed from ${req.params.username}'s favorites.`);
+    res.json(updatedUser);
   } catch (err) {
     res.status(500).send('Error: ' + err);
   }
 });
 
-// Delete a user
+// 9) Allow existing users to deregister
 app.delete('/users/:username', async (req, res) => {
   try {
     const deletedUser = await Users.findOneAndDelete({ Username: req.params.username });
@@ -145,7 +156,13 @@ app.delete('/users/:username', async (req, res) => {
   }
 });
 
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+// 404 + Error handler
+app.use((req, res) => res.status(404).send('Route not found'));
+app.use((err, _req, res, _next) => {
+  console.error('Server error:', err);
+  res.status(500).send('Internal Server Error');
 });
+
+// START
+const port = 3000;
+app.listen(port, () => console.log(`Server is running on http://localhost:${port}`));
