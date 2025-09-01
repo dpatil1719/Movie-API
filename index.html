@@ -26,6 +26,13 @@
     th {
       background-color: #efefef;
     }
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      overflow-x: auto;
+    }
   </style>
 </head>
 <body>
@@ -33,7 +40,7 @@
   <table>
     <thead>
       <tr>
-        <th>Request</th>
+        <th>Method</th>
         <th>Endpoint</th>
         <th>Description</th>
         <th>Request Body</th>
@@ -49,49 +56,63 @@
       <tr>
         <td>GET</td>
         <td>/movies/:title</td>
-        <td>Return data about a single movie by title (description, genre, director, image URL, featured)</td>
+        <td>Return data about a single movie by title</td>
         <td>None</td>
       </tr>
       <tr>
         <td>GET</td>
-        <td>/movies/genre/:genreName</td>
-        <td>Return data about a genre by name (description)</td>
+        <td>/genres/:name</td>
+        <td>Return genre details (description) by name</td>
         <td>None</td>
       </tr>
       <tr>
         <td>GET</td>
-        <td>/movies/director/:directorName</td>
-        <td>Return data about a director (bio, birth year, death year)</td>
+        <td>/directors/:name</td>
+        <td>Return director details (bio, birth year, death year) by name</td>
         <td>None</td>
       </tr>
       <tr>
         <td>POST</td>
         <td>/users</td>
-        <td>Allow new users to register</td>
-        <td>{ "username": "user", "password": "pass", "email": "email" }</td>
+        <td>Register a new user</td>
+        <td>
+          <pre>{
+  "Username": "user1",
+  "Password": "securepass",
+  "Email": "user1@example.com",
+  "Birthday": "1990-01-01"
+}</pre>
+        </td>
       </tr>
       <tr>
         <td>PUT</td>
         <td>/users/:username</td>
-        <td>Allow users to update their user info</td>
-        <td>{ "username": "newName", "password": "newPass", "email": "newEmail" }</td>
+        <td>Update an existing user's info</td>
+        <td>
+          <pre>{
+  "Username": "newName",
+  "Password": "newPass",
+  "Email": "newEmail@example.com",
+  "Birthday": "1985-05-05"
+}</pre>
+        </td>
       </tr>
       <tr>
         <td>POST</td>
-        <td>/users/:username/favorites/:movieID</td>
-        <td>Allow users to add a movie to their list of favorites</td>
+        <td>/users/:username/movies/:movieId</td>
+        <td>Add a movie to a user's favorites</td>
         <td>None</td>
       </tr>
       <tr>
         <td>DELETE</td>
-        <td>/users/:username/favorites/:movieID</td>
-        <td>Allow users to remove a movie from their list of favorites</td>
+        <td>/users/:username/movies/:movieId</td>
+        <td>Remove a movie from a user's favorites</td>
         <td>None</td>
       </tr>
       <tr>
         <td>DELETE</td>
         <td>/users/:username</td>
-        <td>Allow existing users to deregister</td>
+        <td>Deregister (delete) a user</td>
         <td>None</td>
       </tr>
     </tbody>
