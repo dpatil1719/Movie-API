@@ -1,6 +1,7 @@
 // index.js
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 const passport = require('passport');
@@ -12,6 +13,24 @@ mongoose.connect('mongodb://127.0.0.1:27017/cfDB');
 
 // --- APP SETUP ---
 const app = express();
+
+// CORS (define allowed front-end origins here)
+const allowedOrigins = ['http://localhost:8080', 'http://testsite.com'];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow tools like Postman
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg =
+          'The CORS policy for this application doesn’t allow access from origin ' +
+          origin;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+  })
+);
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -37,7 +56,8 @@ const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // --- ROUTES ---
 
 // 1) Return ALL movies (protected)
-app.get('/movies',
+app.get(
+  '/movies',
   passport.authenticate('jwt', { session: false }),
   async (_req, res) => {
     try {
@@ -50,13 +70,14 @@ app.get('/movies',
 );
 
 // 2) Return a single movie by title (protected, case-insensitive)
-app.get('/movies/:title',
+app.get(
+  '/movies/:title',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
       const title = req.params.title;
       const movie = await Movies.findOne({
-        Title: { $regex: new RegExp(`^${escapeRegExp(title)}$`, 'i') }
+        Title: { $regex: new RegExp(`^${escapeRegExp(title)}$`, 'i') },
       }).lean();
 
       if (!movie) return res.status(404).send('Movie not found');
@@ -68,7 +89,8 @@ app.get('/movies/:title',
 );
 
 // 3) Return genre data by name (protected)
-app.get('/genres/:name',
+app.get(
+  '/genres/:name',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
@@ -87,13 +109,16 @@ app.get('/genres/:name',
 );
 
 // 4) Return director data by name (protected)
-app.get('/directors/:name',
+app.get(
+  '/directors/:name',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
       const name = req.params.name;
       const movie = await Movies.findOne(
-        { 'Director.Name': { $regex: new RegExp(`^${escapeRegExp(name)}$`, 'i') } },
+        {
+          'Director.Name': { $regex: new RegExp(`^${escapeRegExp(name)}$`, 'i') },
+        },
         { Director: 1, _id: 0 }
       ).lean();
 
@@ -105,14 +130,23 @@ app.get('/directors/:name',
   }
 );
 
-// 5) Register new user (PUBLIC — do not protect)
+// 5) Register new user (PUBLIC — do not protect) with HASHED PASSWORD
 app.post('/users', async (req, res) => {
   try {
     const { Username, Password, Email, Birthday } = req.body;
+
     const existing = await Users.findOne({ Username });
     if (existing) return res.status(400).send('Username already exists');
 
-    const user = await Users.create({ Username, Password, Email, Birthday });
+    // make sure models.js has User.hashPassword
+    const hashedPassword = Users.hashPassword(Password);
+
+    const user = await Users.create({
+      Username,
+      Password: hashedPassword,
+      Email,
+      Birthday,
+    });
     res.status(201).json(user);
   } catch (err) {
     res.status(500).send('Error: ' + err);
@@ -120,7 +154,8 @@ app.post('/users', async (req, res) => {
 });
 
 // 6) Update user info (protected + self-only)
-app.put('/users/:username',
+app.put(
+  '/users/:username',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
@@ -130,7 +165,7 @@ app.put('/users/:username',
 
       const update = {
         ...(req.body.Username && { Username: req.body.Username }),
-        ...(req.body.Password && { Password: req.body.Password }),
+        ...(req.body.Password && { Password: Users.hashPassword(req.body.Password) }), // re-hash if changing password
         ...(req.body.Email && { Email: req.body.Email }),
         ...(req.body.Birthday && { Birthday: req.body.Birthday }),
       };
@@ -151,7 +186,8 @@ app.put('/users/:username',
 );
 
 // 7) Add a favorite movie (protected + self-only)
-app.post('/users/:username/movies/:movieId',
+app.post(
+  '/users/:username/movies/:movieId',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
@@ -174,7 +210,8 @@ app.post('/users/:username/movies/:movieId',
 );
 
 // 8) Remove a favorite movie (protected + self-only)
-app.delete('/users/:username/movies/:movieId',
+app.delete(
+  '/users/:username/movies/:movieId',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
@@ -197,7 +234,8 @@ app.delete('/users/:username/movies/:movieId',
 );
 
 // 9) Deregister user (protected + self-only)
-app.delete('/users/:username',
+app.delete(
+  '/users/:username',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
@@ -215,7 +253,8 @@ app.delete('/users/:username',
 );
 
 // (Optional) List users (protected)
-app.get('/users',
+app.get(
+  '/users',
   passport.authenticate('jwt', { session: false }),
   async (_req, res) => {
     try {
@@ -235,4 +274,6 @@ app.use((err, _req, res, _next) => {
 
 // --- START SERVER ---
 const PORT = 3000;
-app.listen(PORT, () => console.log(`Server is running on http://localhost:${PORT}`));
+app.listen(PORT, () =>
+  console.log(`Server is running on http://localhost:${PORT}`)
+);
