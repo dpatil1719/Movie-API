@@ -2,6 +2,7 @@
 const jwtSecret = 'your_jwt_secret'; // must match passport.js
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
+const jwtSecret = process.env.JWT_SECRET || 'dev_only_secret';
 
 require('./passport'); // register Local & JWT strategies
 

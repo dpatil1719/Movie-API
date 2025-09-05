@@ -5,11 +5,12 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 const passport = require('passport');
+const { check, validationResult } = require('express-validator');
 
 const { Movie: Movies, User: Users } = require('./models.js');
 
 // --- DB CONNECTION ---
-mongoose.connect('mongodb://127.0.0.1:27017/cfDB');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cfDB');
 
 // --- APP SETUP ---
 const app = express();
@@ -273,7 +274,7 @@ app.use((err, _req, res, _next) => {
 });
 
 // --- START SERVER ---
-const PORT = 3000;
-app.listen(PORT, () =>
-  console.log(`Server is running on http://localhost:${PORT}`)
+const port = process.env.PORT || 3000;
+app.listen(port, '0.0.0.0', () =>
+  console.log(`Listening on Port ${port}`)
 );
