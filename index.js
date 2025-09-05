@@ -12,6 +12,7 @@ const { Movie: Movies, User: Users } = require('./models.js');
 // --- DB CONNECTION ---
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cfDB');
 
+
 // --- APP SETUP ---
 const app = express();
 
@@ -275,6 +276,6 @@ app.use((err, _req, res, _next) => {
 
 // --- START SERVER ---
 const port = process.env.PORT || 3000;
-app.listen(port, '0.0.0.0', () =>
-  console.log(`Listening on Port ${port}`)
-);
+app.listen(port, '0.0.0.0', () => {
+  console.log('Listening on Port ' + port);
+});
