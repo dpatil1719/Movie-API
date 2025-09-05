@@ -5,31 +5,33 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 const passport = require('passport');
-const { check, validationResult } = require('express-validator');
 
 const { Movie: Movies, User: Users } = require('./models.js');
 
 // --- DB CONNECTION ---
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cfDB');
 
-
 // --- APP SETUP ---
 const app = express();
 
-// CORS (define allowed front-end origins here)
-const allowedOrigins = ['http://localhost:8080', 'http://testsite.com'];
+// --- CORS ---
+const defaultAllowed = ['http://localhost:8080', 'http://localhost:3000', 'http://testsite.com'];
+const extraAllowed = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+const allowedOrigins = new Set([...defaultAllowed, ...extraAllowed]);
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true); // allow tools like Postman
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg =
-          'The CORS policy for this application doesn’t allow access from origin ' +
-          origin;
-        return callback(new Error(msg), false);
+      if (origin.endsWith('.herokuapp.com') || allowedOrigins.has(origin)) {
+        return callback(null, true);
       }
-      return callback(null, true);
-    },
+      const msg = 'The CORS policy for this application doesn’t allow access from origin ' + origin;
+      return callback(new Error(msg), false);
+    }
   })
 );
 
@@ -140,7 +142,6 @@ app.post('/users', async (req, res) => {
     const existing = await Users.findOne({ Username });
     if (existing) return res.status(400).send('Username already exists');
 
-    // make sure models.js has User.hashPassword
     const hashedPassword = Users.hashPassword(Password);
 
     const user = await Users.create({

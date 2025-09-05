@@ -1,56 +1,55 @@
 // passport.js
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
-const Models = require('./models.js');
 const passportJWT = require('passport-jwt');
+const { User: Users } = require('./models');
 
-let Users = Models.User;
-let JWTStrategy = passportJWT.Strategy;
-let ExtractJWT = passportJWT.ExtractJwt; // note lowercase 't' in ExtractJwt
+const JWTStrategy = passportJWT.Strategy;
+const ExtractJWT = passportJWT.ExtractJwt;
 
+// Use same secret as auth.js
+const jwtSecret = process.env.JWT_SECRET || 'dev_only_secret';
+
+// Local username/password strategy
 passport.use(
   new LocalStrategy(
     {
       usernameField: 'Username',
       passwordField: 'Password',
+      session: false
     },
-    async (username, password, callback) => {
-      console.log(`${username} ${password}`);
-      await Users.findOne({ Username: username })
-        .then((user) => {
-          if (!user) {
-            console.log('incorrect username');
-            return callback(null, false, {
-              message: 'Incorrect username or password.',
-            });
-          }
-          console.log('finished');
-          return callback(null, user);
-        })
-        .catch((error) => {
-          if (error) {
-            console.log(error);
-            return callback(error);
-          }
-        });
+    async (username, password, done) => {
+      try {
+        const user = await Users.findOne({ Username: username });
+        if (!user) {
+          return done(null, false, { message: 'Incorrect username or password.' });
+        }
+        if (!user.validatePassword(password)) {
+          return done(null, false, { message: 'Incorrect password.' });
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
     }
   )
 );
 
+// JWT strategy
 passport.use(
   new JWTStrategy(
     {
       jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
-      secretOrKey: 'your_jwt_secret',
+      secretOrKey: jwtSecret
     },
-    async (jwtPayload, callback) => {
-      return await Users.findById(jwtPayload._id)
-        .then((user) => {
-          return callback(null, user);
-        })
-        .catch((error) => {
-          return callback(error);
-        });
+    async (jwtPayload, done) => {
+      try {
+        const user = await Users.findById(jwtPayload._id);
+        if (!user) return done(null, false);
+        return done(null, user);
+      } catch (err) {
+        return done(err, false);
+      }
     }
   )
 );

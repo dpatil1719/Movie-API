@@ -2,8 +2,9 @@
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 
-const jwtSecret = process.env.JWT_SECRET || 'dev_only_secret'; // only declare once!
-require('./passport'); // ensure strategies are registered
+const jwtSecret = process.env.JWT_SECRET || 'dev_only_secret'; // declare ONCE
+
+require('./passport'); // register strategies
 
 function generateJWTToken(user) {
   return jwt.sign(
@@ -14,7 +15,7 @@ function generateJWTToken(user) {
 }
 
 module.exports = (app) => {
-  // normalize params so LocalStrategy can read Username/Password
+  // allow Username/Password via body OR query params (for Postman "Params" tab)
   app.post(
     '/login',
     (req, _res, next) => {
