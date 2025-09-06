@@ -2,56 +2,39 @@
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const passportJWT = require('passport-jwt');
-const { User: Users } = require('./models');
+const { User } = require('./models');
 
 const JWTStrategy = passportJWT.Strategy;
-const ExtractJWT = passportJWT.ExtractJwt;
+const ExtractJwt = passportJWT.ExtractJwt;
 
-// Use same secret as auth.js
-const jwtSecret = process.env.JWT_SECRET || 'dev_only_secret';
-
-// Local username/password strategy
 passport.use(
   new LocalStrategy(
-    {
-      usernameField: 'Username',
-      passwordField: 'Password',
-      session: false
-    },
+    { usernameField: 'Username', passwordField: 'Password' },
     async (username, password, done) => {
       try {
-        const user = await Users.findOne({ Username: username });
-        if (!user) {
+        const user = await User.findOne({ Username: username });
+        if (!user) return done(null, false, { message: 'Incorrect username or password.' });
+        if (!user.validatePassword(password)) {
           return done(null, false, { message: 'Incorrect username or password.' });
         }
-        if (!user.validatePassword(password)) {
-          return done(null, false, { message: 'Incorrect password.' });
-        }
         return done(null, user);
-      } catch (err) {
-        return done(err);
+      } catch (e) {
+        return done(e);
       }
     }
   )
 );
 
-// JWT strategy
 passport.use(
   new JWTStrategy(
-    {
-      jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
-      secretOrKey: jwtSecret
-    },
-    async (jwtPayload, done) => {
+    { jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), secretOrKey: process.env.JWT_SECRET || 'dev_only_secret' },
+    async (payload, done) => {
       try {
-        const user = await Users.findById(jwtPayload._id);
-        if (!user) return done(null, false);
-        return done(null, user);
-      } catch (err) {
-        return done(err, false);
+        const user = await User.findById(payload._id);
+        return done(null, user || false);
+      } catch (e) {
+        return done(e, false);
       }
     }
   )
 );
-
-module.exports = passport;
