@@ -236,7 +236,29 @@ app.delete(
   }
 );
 
-// 9) Deregister user (protected + self-only)
+
+// 9) Get a user's favorite movies (protected + self-only)
+app.get(
+  '/users/:username/favorites',
+  passport.authenticate('jwt', { session: false }),
+  async (req, res) => {
+    try {
+      if (req.user.Username !== req.params.username) {
+        return res.status(400).send('Permission denied');
+      }
+      const user = await Users.findOne({ Username: req.params.username })
+        .populate('FavoriteMovies', '-__v') // full movie docs, no __v
+        .select('_id Username FavoriteMovies') // no password
+        .lean();
+
+      if (!user) return res.status(404).send('User not found');
+      res.json(user.FavoriteMovies || []);
+    } catch (err) {
+      res.status(500).send('Error: ' + err);
+    }
+  }
+);
+// 10) Deregister user (protected + self-only)
 app.delete(
   '/users/:username',
   passport.authenticate('jwt', { session: false }),
