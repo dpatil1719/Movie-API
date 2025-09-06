@@ -236,8 +236,27 @@ app.delete(
   }
 );
 
+// Get my profile (no password)
+app.get(
+  '/users/:username',
+  passport.authenticate('jwt', { session: false }),
+  async (req, res) => {
+    try {
+      if (req.user.Username !== req.params.username) {
+        return res.status(400).send('Permission denied');
+      }
+      const user = await Users.findOne({ Username: req.params.username })
+        .select('-Password')
+        .lean();
+      if (!user) return res.status(404).send('User not found');
+      res.json(user);
+    } catch (err) {
+      res.status(500).send('Error: ' + err);
+    }
+  }
+);
 
-// 9) Get a user's favorite movies (protected + self-only)
+// 9) Get a user's favorite movies
 app.get(
   '/users/:username/favorites',
   passport.authenticate('jwt', { session: false }),
@@ -246,18 +265,22 @@ app.get(
       if (req.user.Username !== req.params.username) {
         return res.status(400).send('Permission denied');
       }
-      const user = await Users.findOne({ Username: req.params.username })
-        .populate('FavoriteMovies', '-__v') // full movie docs, no __v
-        .select('_id Username FavoriteMovies') // no password
-        .lean();
 
+      // grab favorite IDs first
+      const user = await Users.findOne({ Username: req.params.username })
+        .select('FavoriteMovies')
+        .lean();
       if (!user) return res.status(404).send('User not found');
-      res.json(user.FavoriteMovies || []);
+
+      // fetch movie documents for those IDs
+      const movies = await Movies.find({ _id: { $in: user.FavoriteMovies } }).lean();
+      res.json(movies);
     } catch (err) {
       res.status(500).send('Error: ' + err);
     }
   }
 );
+
 // 10) Deregister user (protected + self-only)
 app.delete(
   '/users/:username',
