@@ -30,18 +30,28 @@ const extraAllowed = (process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 const allowedOrigins = new Set([...defaultAllowed, ...extraAllowed]);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow tools like Postman
-      if (origin.endsWith('.herokuapp.com') || allowedOrigins.has(origin)) {
-        return callback(null, true);
-      }
-      const msg = 'The CORS policy for this application doesn’t allow access from origin ' + origin;
-      return callback(new Error(msg), false);
-    }
-  })
-);
+// CORS (switchable: open-all vs whitelist)
+const OPEN_CORS = process.env.OPEN_CORS === 'true';
+
+if (OPEN_CORS) {
+  app.use(cors()); // allow all
+} else {
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true); // allow tools like Postman
+        if (origin.endsWith('.herokuapp.com') || allowedOrigins.has(origin)) {
+          return callback(null, true);
+        }
+        const msg =
+          'The CORS policy for this application doesn’t allow access from origin ' + origin;
+        return callback(new Error(msg), false);
+      },
+    })
+  );
+}
+
+
 
 app.use(morgan('dev'));
 app.use(express.json());
