@@ -5,11 +5,19 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 const passport = require('passport');
+require('dotenv').config();
 
 const { Movie: Movies, User: Users } = require('./models.js');
 
 // --- DB CONNECTION ---
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cfDB');
+// mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cfDB');
+
+const mongoUri =
+  process.env.CONNECTION_URI ||
+  process.env.MONGODB_URI ||
+  'mongodb://127.0.0.1:27017/cfDB';
+
+mongoose.connect(mongoUri);
 
 // --- APP SETUP ---
 const app = express();
