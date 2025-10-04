@@ -80,7 +80,6 @@ const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // 1) Return ALL movies (protected)
 app.get(
   '/movies',
-  passport.authenticate('jwt', { session: false }),
   async (_req, res) => {
     try {
       const movies = await Movies.find().lean();
