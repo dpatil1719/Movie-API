@@ -23,7 +23,7 @@ mongoose.connect(mongoUri);
 const app = express();
 
 // --- CORS ---
-const defaultAllowed = ['http://localhost:8080', 'http://localhost:3000', 'http://testsite.com'];
+const defaultAllowed = ['http://localhost:8080', 'http://localhost:3000','http://localhost:1234', 'http://testsite.com'];
 const extraAllowed = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
@@ -47,6 +47,7 @@ if (OPEN_CORS) {
           'The CORS policy for this application doesn’t allow access from origin ' + origin;
         return callback(new Error(msg), false);
       },
+      allowedHeaders: ['Content-Type', 'Authorization'],
     })
   );
 }
