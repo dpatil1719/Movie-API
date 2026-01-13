@@ -68,6 +68,42 @@ mongoose
   });
 
 /* ===== AUTH ===== */
+
+/* ===== REGISTER USER (PUBLIC) ===== */
+app.post("/users", async (req, res) => {
+  try {
+    const { Username, Password, Email, Birthday } = req.body;
+
+    if (!Username || !Password || !Email) {
+      return res.status(400).send("Username, Password, and Email are required");
+    }
+
+    const existingUser = await Users.findOne({ Username });
+    if (existingUser) {
+      return res.status(400).send("Username already exists");
+    }
+
+    const hashedPassword = bcrypt.hashSync(Password, 10);
+
+    const newUser = await Users.create({
+      Username,
+      Password: hashedPassword,
+      Email,
+      Birthday
+    });
+
+    // never return password
+    const userSafe = newUser.toObject();
+    delete userSafe.Password;
+
+    return res.status(201).json(userSafe);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Error: " + err);
+  }
+});
+
+
 app.post('/login', async (req, res) => {
   const user = await Users.findOne({ Username: req.body.username });
   if (!user) return res.status(400).send('User not found');
