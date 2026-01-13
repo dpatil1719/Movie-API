@@ -16,14 +16,27 @@ const Movies = Models.Movie;
 const app = express();
 app.use(passport.initialize());
 
-/* ===== CORS (FIXED FOR ANGULAR + RENDER) ===== */
+/* ===== CORS (STRICT + PREFLIGHT SAFE) ===== */
+const allowedOrigins = [
+  "http://localhost:4200",
+  "http://localhost:8080",
+  "https://dpatil1719.github.io"
+];
+
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: (origin, cb) => {
+    // allow requests with no origin (curl, Postman)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error("CORS blocked: " + origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.options('*', cors());
+// Always respond to preflight
+app.options("*", cors());
 
 /* ===== MIDDLEWARE ===== */
 app.use(bodyParser.json());
