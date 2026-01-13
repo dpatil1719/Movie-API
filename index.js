@@ -17,26 +17,58 @@ const app = express();
 app.use(passport.initialize());
 const JWT_SECRET = 'myflix_secret_key';
 
-// Middleware
+/* ===== CORS ===== */
+const allowedOrigins = [
+  'http://localhost:4200',
+  'https://dpatil1719.github.io'
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS not allowed'));
+    }
+  })
+);
+
 app.use(bodyParser.json());
 app.use(morgan('common'));
-app.use(cors());
 
-// MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/myFlixDB');
+/* ===== MONGODB (EXPLICIT + SAFE) ===== */
+const mongoUri =
+  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/myFlixDB';
 
-// ===== REGISTER USER =====
+console.log('Connecting to MongoDB…');
+
+mongoose
+  .connect(mongoUri)
+  .then(() => {
+    console.log('MongoDB connected');
+
+    /* ===== START SERVER ONLY AFTER DB CONNECTS ===== */
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+/* ===== ROUTES ===== */
+
 app.post('/users', async (req, res) => {
   try {
     const hashedPassword = bcrypt.hashSync(req.body.Password, 10);
-
     const newUser = new Users({
       Username: req.body.Username,
       Password: hashedPassword,
       Email: req.body.Email,
       Birthday: req.body.Birthday
     });
-
     const user = await newUser.save();
     res.status(201).json(user);
   } catch (err) {
@@ -45,22 +77,16 @@ app.post('/users', async (req, res) => {
   }
 });
 
-// ===== LOGIN =====
 app.post('/login', async (req, res) => {
   try {
     const user = await Users.findOne({ Username: req.body.username });
-    if (!user) {
-      return res.status(400).send('User not found');
-    }
+    if (!user) return res.status(400).send('User not found');
 
     const validPassword = await bcrypt.compare(
       req.body.password,
       user.Password
     );
-
-    if (!validPassword) {
-      return res.status(400).send('Invalid password');
-    }
+    if (!validPassword) return res.status(400).send('Invalid password');
 
     const token = jwt.sign(
       { Username: user.Username },
@@ -75,126 +101,16 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// ===== GET USER (JWT PROTECTED) =====
-app.get(
-  '/users/:username',
-  passport.authenticate('jwt', { session: false }),
-  async (req, res) => {
-    try {
-      // Use the authenticated user from the token
-      const user = await Users.findOne({ Username: req.user.Username }).select('-Password');
-      if (!user) return res.status(404).send('User not found.');
-      return res.json(user);
-    } catch (err) {
-      console.error(err);
-      return res.status(500).send('Error: ' + err);
-    }
-  }
-);
-
-
-
-// ===== GET ALL MOVIES (JWT PROTECTED) =====
 app.get(
   '/movies',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
       const movies = await Movies.find();
-      res.status(200).json(movies);
+      res.json(movies);
     } catch (err) {
       console.error(err);
       res.status(500).send('Error: ' + err);
     }
   }
 );
-
-
-// ===== UPDATE USER (JWT PROTECTED) =====
-app.put(
-  '/users/:username',
-  passport.authenticate('jwt', { session: false }),
-  async (req, res) => {
-    try {
-      const updatedUser = await Users.findOneAndUpdate(
-        { Username: req.user.Username },
-        {
-          $set: {
-            ...(req.body.Username !== undefined && { Username: req.body.Username }),
-            ...(req.body.Password !== undefined && { Password: bcrypt.hashSync(req.body.Password, 10) }),
-            ...(req.body.Email !== undefined && { Email: req.body.Email }),
-            ...(req.body.Birthday !== undefined && { Birthday: req.body.Birthday })
-          }
-        },
-        { new: true }
-      );
-
-      if (!updatedUser) return res.status(404).send('User not found.');
-      return res.json(updatedUser);
-    } catch (err) {
-      console.error(err);
-      return res.status(500).send('Error: ' + err);
-    }
-  }
-);
-
-
-
-// ============================
-// ============================
-// FAVORITES (ADD / REMOVE)
-
-// Add a movie to favorites
-app.post(
-  '/users/:username/movies/:movieId',
-  passport.authenticate('jwt', { session: false }),
-  async (req, res) => {
-    try {
-      // ✅ Use authenticated user from JWT (prevents username mismatch issues)
-      const username = req.user.Username;
-      const movieId = req.params.movieId;
-
-      const updatedUser = await Users.findOneAndUpdate(
-        { Username: username },
-        { $addToSet: { FavoriteMovies: movieId } },
-        { new: true }
-      );
-
-      if (!updatedUser) return res.status(404).send('User not found.');
-      return res.json(updatedUser);
-    } catch (err) {
-      console.error(err);
-      return res.status(500).send('Error: ' + err);
-    }
-  }
-);
-
-// Remove a movie from favorites
-app.delete(
-  '/users/:username/movies/:movieId',
-  passport.authenticate('jwt', { session: false }),
-  async (req, res) => {
-    try {
-      const username = req.user.Username;
-      const movieId = req.params.movieId;
-
-      const updatedUser = await Users.findOneAndUpdate(
-        { Username: username },
-        { $pull: { FavoriteMovies: movieId } },
-        { new: true }
-      );
-
-      if (!updatedUser) return res.status(404).send('User not found.');
-      return res.json(updatedUser);
-    } catch (err) {
-      console.error(err);
-      return res.status(500).send('Error: ' + err);
-    }
-  }
-);
-
-
-// ===== SERVER =====
-app.listen(3000, () => {
-  console.log('Server running on port 3000');
-});
